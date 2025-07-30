@@ -7,6 +7,7 @@
 *.test
 
 # Output of go build
+/bin
 /go/bin/
 /go/pkg/
 
@@ -38,6 +39,7 @@ charts/**/.helmignore
 # Local env files
 .env
 .env.*
+*.env
 
 # IDEs and editors
 .vscode/
