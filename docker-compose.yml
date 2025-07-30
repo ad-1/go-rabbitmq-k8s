@@ -1,0 +1,40 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - common.env
+    entrypoint: [ "/bin/sh", "-c", "sleep 5 && /app/producer" ]
+    restart: "no"
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - common.env
+      - consumer.env
+    entrypoint: [ "/bin/sh", "-c", "sleep 10 && /app/consumer" ]
+    restart: "no"

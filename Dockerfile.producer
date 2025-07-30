@@ -1,0 +1,20 @@
+# ---- Builder Stage ----
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Build the producer binary
+RUN go build -o producer ./cmd/producer
+
+# ---- Runtime Stage ----
+FROM alpine:latest
+
+# Copy the binary from builder
+COPY --from=builder /app/producer /app/producer
+
+# Run the producer
+ENTRYPOINT ["/app/producer"]
