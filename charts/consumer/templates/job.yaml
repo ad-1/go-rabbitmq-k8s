@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ include "consumer.name" . }}
+  labels:
+    {{- include "consumer.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ include "consumer.name" . }}
+    spec:
+      containers:
+        - name: consumer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "consumer.name" . }}-env
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+      restartPolicy: Never

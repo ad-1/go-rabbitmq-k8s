@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ include "producer.name" . }}-env
+  labels:
+    {{- include "producer.labels" . | nindent 4 }}
+data:
+  NUM_MESSAGES: "{{ .Values.env.NUM_MESSAGES }}"
+  RABBITMQ_HOST: "{{ .Values.env.RABBITMQ_HOST }}"
+  RABBITMQ_PORT: "{{ .Values.env.RABBITMQ_PORT }}"
+  RABBITMQ_USER: "{{ .Values.env.RABBITMQ_USER }}"
+  RABBITMQ_PASSWORD: "{{ .Values.env.RABBITMQ_PASSWORD }}"

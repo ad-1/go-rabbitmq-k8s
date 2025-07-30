@@ -1,0 +1,25 @@
+{{- /*
+NOTES.txt for a Helm chart that deploys a one-time RabbitMQ producer Job.
+*/ -}}
+
+{{- if .Release.IsInstall }}
+The producer job has been created.
+
+To view the Job logs and confirm it ran successfully, run:
+
+  minikube kubectl -- -n {{ .Release.Namespace }} logs job/{{ include "producer.name" . }}
+
+To re-run the job (after a successful run), delete it and reinstall the chart:
+
+  minikube kubectl -- -n {{ .Release.Namespace }} delete job/{{ include "producer.name" . }}
+  helm install {{ .Release.Name }} {{ .Chart.Name }} --namespace {{ .Release.Namespace }}
+
+{{- else if .Release.IsUpgrade }}
+The producer job was upgraded.
+
+If the Job has already completed, you may want to delete and re-install it
+to re-trigger the run:
+
+  minikube kubectl -- -n {{ .Release.Namespace }} delete job/{{ include "producer.name" . }}
+  helm install {{ .Release.Name }} {{ .Chart.Name }} --namespace {{ .Release.Namespace }}
+{{- end }}
