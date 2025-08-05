@@ -1,0 +1,10 @@
+secret:
+  name: rabbitmq
+  key: rabbitmq-password
+  rabbitmqPasswordEnvName: RABBITMQ_PASSWORD
+
+env:
+  NUM_MESSAGES: "10"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: user
