@@ -1,87 +1,62 @@
+# IMPORTANT: If you are using Minikube, you must set the Docker environment variables in your shell before running any build commands.
+# Run the following command in your terminal before using this Makefile:
+# eval $(minikube docker-env)
+# This ensures Docker builds images inside the Minikube VM, not on your host.
+
 KUBECTL = minikube kubectl --
 NAMESPACE = rabbitmq-demo
 
-# Docker images
 CONSUMER_IMAGE = go-rabbitmq-k8s-consumer:latest
 PRODUCER_IMAGE = go-rabbitmq-k8s-producer:latest
 
-# Chart paths
 CONSUMER_CHART = ./charts/consumer
 PRODUCER_CHART = ./charts/producer
 
-.PHONY: all build build-consumer build-producer deploy deploy-consumer deploy-producer restart restart-consumer restart-producer status status-consumer status-producer logs logs-consumer logs-producer clean clean-consumer clean-producer uninstall uninstall-consumer uninstall-producer
+.PHONY: all build build-consumer build-producer deploy deploy-consumer deploy-producer deploy-rabbitmq wait-for-rabbitmq status clean uninstall
 
-# Build images
 build: build-consumer build-producer
 
 build-consumer:
-	eval $$(minikube docker-env) && docker build -t $(CONSUMER_IMAGE) -f Dockerfile.consumer .
+	docker build -t $(CONSUMER_IMAGE) -f Dockerfile.consumer .
 
 build-producer:
-	eval $$(minikube docker-env) && docker build -t $(PRODUCER_IMAGE) -f Dockerfile.producer .
+	docker build -t $(PRODUCER_IMAGE) -f Dockerfile.producer .
 
-# Deploy charts
-deploy: deploy-consumer deploy-producer
+deploy: deploy-rabbitmq wait-for-rabbitmq deploy-consumer deploy-producer
+
+deploy-rabbitmq:
+	@if helm status rabbitmq --namespace $(NAMESPACE) >/dev/null 2>&1; then \
+		echo "RabbitMQ already exists. Skipping install."; \
+	else \
+		helm repo add bitnami https://charts.bitnami.com/bitnami; \
+		helm repo update; \
+		helm upgrade --install rabbitmq bitnami/rabbitmq --namespace $(NAMESPACE) --create-namespace; \
+	fi
+
+wait-for-rabbitmq:
+	@echo "Waiting for RabbitMQ pod to be ready..."
+	@$(KUBECTL) -n $(NAMESPACE) wait --for=condition=ready pod -l app.kubernetes.io/name=rabbitmq --timeout=360s
 
 deploy-consumer:
-	helm upgrade --install rabbitmq-consumer $(CONSUMER_CHART) --namespace $(NAMESPACE) --create-namespace
+	pwd
+	helm upgrade --install rabbitmq-consumer $(CONSUMER_CHART) \
+	  --namespace $(NAMESPACE) --create-namespace \
+	  -f ./values-common.yaml -f $(CONSUMER_CHART)/values.yaml
 
 deploy-producer:
-	helm upgrade --install rabbitmq-producer $(PRODUCER_CHART) --namespace $(NAMESPACE) --create-namespace
+	pwd
+	helm upgrade --install rabbitmq-producer $(PRODUCER_CHART) \
+	  --namespace $(NAMESPACE) --create-namespace \
+	  -f ./values-common.yaml -f $(PRODUCER_CHART)/values.yaml
 
-# Restart deployments and jobs
-restart: restart-consumer restart-producer
+status:
+	$(KUBECTL) -n $(NAMESPACE) get jobs,pods
 
-restart-consumer:
-	# For jobs, delete the existing job to restart it
-	$(KUBECTL) -n $(NAMESPACE) delete job consumer || true
-	helm upgrade --install rabbitmq-consumer $(CONSUMER_CHART) --namespace $(NAMESPACE) --create-namespace
+clean:
+	$(KUBECTL) -n $(NAMESPACE) delete job consumer producer || true
+	-helm uninstall rabbitmq-consumer --namespace $(NAMESPACE)
+	-helm uninstall rabbitmq-producer --namespace $(NAMESPACE)
 
-restart-producer:
-	# For jobs, delete the existing job to restart it
-	$(KUBECTL) -n $(NAMESPACE) delete job producer || true
-	helm upgrade --install rabbitmq-producer $(PRODUCER_CHART) --namespace $(NAMESPACE) --create-namespace
+uninstall: clean
 
-# Get rollout/job status
-status: status-consumer status-producer
-
-status-consumer:
-	$(KUBECTL) -n $(NAMESPACE) get jobs consumer || echo "Consumer job not found"
-	$(KUBECTL) -n $(NAMESPACE) get pods -l job-name=consumer
-
-status-producer:
-	# Show job status and pods
-	$(KUBECTL) -n $(NAMESPACE) get jobs producer || echo "Producer job not found"
-	$(KUBECTL) -n $(NAMESPACE) get pods -l job-name=producer
-
-# Tail logs
-logs: logs-consumer logs-producer
-
-logs-consumer:
-	$(KUBECTL) -n $(NAMESPACE) logs -l app=consumer --tail=50
-
-logs-producer:
-	$(KUBECTL) -n $(NAMESPACE) logs -l job-name=producer --tail=50
-
-# Cleanup resources
-clean: clean-consumer clean-producer
-
-clean-consumer:
-	$(KUBECTL) -n $(NAMESPACE) delete deploy consumer || true
-	helm uninstall rabbitmq-consumer --namespace $(NAMESPACE) || true
-
-clean-producer:
-	$(KUBECTL) -n $(NAMESPACE) delete job producer || true
-	helm uninstall rabbitmq-producer --namespace $(NAMESPACE) || true
-
-# Uninstall all Helm releases
-uninstall: uninstall-consumer uninstall-producer
-
-uninstall-consumer:
-	helm uninstall rabbitmq-consumer --namespace $(NAMESPACE) || true
-
-uninstall-producer:
-	helm uninstall rabbitmq-producer --namespace $(NAMESPACE) || true
-
-# Combined: build, deploy, restart for both consumer and producer
-all: clean build deploy restart
+all: clean build deploy status
