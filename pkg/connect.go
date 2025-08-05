@@ -14,7 +14,7 @@ func Connect() (*amqp.Connection, *amqp.Channel) {
 	password := GetEnv("RABBITMQ_PASSWORD", "guest")
 
 	url := "amqp://" + user + ":" + password + "@" + host + ":" + port + "/"
-	log.Printf("Connecting to RabbitMQ at %s", url)
+	log.Printf("Connecting to RabbitMQ...")
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
