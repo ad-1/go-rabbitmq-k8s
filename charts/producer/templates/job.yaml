@@ -11,6 +11,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["/app/producer"]
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: {{ .Values.secret.rabbitmqPasswordEnvName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: {{ .Values.secret.key }}
           envFrom:
             - configMapRef:
                 name: {{ include "producer.name" . }}-env

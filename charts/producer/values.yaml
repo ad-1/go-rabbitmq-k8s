@@ -6,10 +6,3 @@ image:
   pullPolicy: Never
 
 resources: {}
-
-env:
-  NUM_MESSAGES: "10"
-  RABBITMQ_HOST: "rabbitmq"
-  RABBITMQ_PORT: "5672"
-  RABBITMQ_USER: user
-  RABBITMQ_PASSWORD: 2KpBAPGl1qKP6xh2

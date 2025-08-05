@@ -15,8 +15,21 @@ spec:
         - name: consumer
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: {{ .Values.secret.rabbitmqPasswordEnvName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: {{ .Values.secret.key }}
           envFrom:
             - configMapRef:
                 name: {{ include "consumer.name" . }}-env
           resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: cache-volume
+              mountPath: {{ .Values.volume.mountPath }}
       restartPolicy: Never
+      volumes:
+        - name: cache-volume
+          persistentVolumeClaim:
+            claimName: {{ include "consumer.name" . }}-pvc
